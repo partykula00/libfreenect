@@ -138,6 +138,83 @@ cdef extern from "libfreenect_sync.h":
     void freenect_sync_stop()
 
 
+cdef extern from "libfreenect_registration.h":
+    ctypedef struct freenect_reg_info:
+        int32_t dx_center
+
+        int32_t ax
+        int32_t bx
+        int32_t cx
+        int32_t dx
+
+        int32_t dx_start
+
+        int32_t ay
+        int32_t by
+        int32_t cy
+        int32_t dy
+
+        int32_t dy_start
+
+        int32_t dx_beta_start
+        int32_t dy_beta_start
+
+        int32_t rollout_blank
+        int32_t rollout_size
+
+        int32_t dx_beta_inc
+        int32_t dy_beta_inc
+
+        int32_t dxdx_start
+        int32_t dxdy_start
+        int32_t dydx_start
+        int32_t dydy_start
+
+        int32_t dxdxdx_start
+        int32_t dydxdx_start
+        int32_t dxdxdy_start
+        int32_t dydxdy_start
+
+        int32_t back_comp1
+
+        int32_t dydydx_start
+
+        int32_t back_comp2
+
+        int32_t dydydy_start
+        
+    ctypedef struct freenect_reg_pad_info:
+        uint16_t start_lines
+        uint16_t end_lines
+        uint16_t cropping_lines
+    
+    ctypedef struct freenect_zero_plane_info:
+        float dcmos_emitter_dist
+        float dcmos_rcmos_dist
+        float reference_distance
+        float reference_pixel_size
+        
+    ctypedef struct freenect_registration:
+        freenect_reg_info reg_info
+        freenect_reg_pad_info reg_pad_info
+        freenect_zero_plane_info zero_plane_info
+        
+        double const_shift
+        
+        uint16_t* raw_to_mm_shift
+        int32_t* depth_to_rgb_shift
+        int32_t (*registration_table)[2]
+        
+    
+    void freenect_camera_to_world(freenect_device *dev, int cx, int cy, int wz, double *wx, double *wy)
+    
+    void freenect_map_rgb_to_depth(freenect_device *dev, uint16_t *depth_mm, uint8_t *rgb_raw, uint8_t *rgb_registered)
+    
+        
+
+
+
+	
 VIDEO_RGB = FREENECT_VIDEO_RGB
 VIDEO_BAYER = FREENECT_VIDEO_BAYER
 VIDEO_IR_8BIT = FREENECT_VIDEO_IR_8BIT
@@ -480,6 +557,14 @@ cdef _video_cb_np(void *data, freenect_frame_mode *mode):
         return PyArray_SimpleNewFromData(2, dims, npc.NPY_UINT16, data)
     else:
         return (<char *>data)[:mode.bytes]
+
+
+def camera_to_world(DevPtr dev, int cx, int cy, int wz):
+    cdef double wx, wy
+    freenect_camera_to_world(dev._ptr, cx, cy, wz, &wx, &wy)
+    return wx, wy
+
+    
 
 def sync_get_depth(index=0, format=DEPTH_11BIT):
     """Get the next available depth frame from the kinect, as a numpy array.
