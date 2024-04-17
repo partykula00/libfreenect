@@ -135,6 +135,7 @@ cdef extern from "libfreenect.h":
 cdef extern from "libfreenect_sync.h":
     int freenect_sync_get_video(void **video, uint32_t *timestamp, int index, freenect_video_format fmt) nogil
     int freenect_sync_get_depth(void **depth, uint32_t *timestamp, int index, freenect_depth_format fmt) nogil
+    int freenect_sync_camera_to_world(int cx, int cy, int wz, double* wz, double* wy, int index) nogil
     void freenect_sync_stop()
 
 
@@ -558,12 +559,6 @@ cdef _video_cb_np(void *data, freenect_frame_mode *mode):
     else:
         return (<char *>data)[:mode.bytes]
 
-
-def camera_to_world(DevPtr dev, int cx, int cy, int wz):
-    cdef double wx, wy
-    freenect_camera_to_world(dev._ptr, cx, cy, wz, &wx, &wy)
-    return wx, wy
-
     
 
 def sync_get_depth(index=0, format=DEPTH_11BIT):
@@ -630,6 +625,22 @@ def sync_get_video(index=0, format=VIDEO_RGB):
         return PyArray_SimpleNewFromData(2, dims, npc.NPY_UINT16, data), timestamp
     else:
         raise TypeError('Conversion not implemented for type [%d]' % (format))
+
+def sync_camera_to_world(pixels_x, pixels_y, world_z, index=0, format=VIDEO_RGB):
+    """Przekształca współrzędne pikseli (x,y) na współrzędne w przestrzeni świata"""
+    
+    cdef double wx
+    cdef double wy
+    
+    cdef int _pixels_x = pixels_x
+    cdef int _pixels_y = pixels_y
+    cdef int _world_z = world_z
+    cdef int _index = index
+    
+    with nogil:
+        out = freenect_sync_camera_to_world(_pixels_x, _pixels_y, _world_z, &wx, &wy, _index)
+        
+    return wx, wy
 
 
 def sync_stop():
